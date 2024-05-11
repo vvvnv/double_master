@@ -45,18 +45,16 @@ def creating_session(subsession: Subsession):
         if p.is_buyer:
             p.num_items = 0
             p.break_even_point = random.randint(subsession.VALUATION_MIN, subsession.VALUATION_MAX)
-            p.current_offer = 0
             if (p.id_in_group == len(players)) or (p.id_in_group == len(players) - 1):
-                p.player_msg = "Плохая компания"
+                p.player_msg = f"Bad company is {subsession.bad_id}"
                 p.bad_info = True
             else:
-                p.player_msg = "No info"
+                p.player_msg = ""
                 p.bad_info = False
         else:
             p.num_items = C.ITEMS_PER_SELLER
             p.id_seller = p.id_in_group
             p.break_even_point = random.randint(subsession.PRODUCTION_COSTS_MIN, subsession.PRODUCTION_COSTS_MAX)
-            p.current_offer = cu(200)
             if p.id_in_group == subsession.bad_id:
                 p.bad_info = True
                 p.player_msg = "You are a bad company"
