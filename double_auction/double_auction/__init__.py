@@ -14,6 +14,7 @@ class C(BaseConstants):
     TIME_FOR_PERIOD = 5
     TIME_FOR_PERIOD1 = 20
     fine_choise = [0, 5, 10]
+    extra_coef = 10
 
 
 Constants = C
@@ -26,7 +27,6 @@ class Subsession(BaseSubsession):
     VALUATION_MAX = models.CurrencyField()
     num_seller = models.IntegerField()
     bad_id = models.IntegerField()
-    fine_choise
 
 def creating_session(subsession: Subsession):
     subsession.group_randomly()
@@ -127,21 +127,22 @@ class Transaction(ExtraModel):
     buyer = models.Link(Buyer)
     seller = models.Link(Seller)
     price = models.CurrencyField()
-    extra_profit = models.CurrencyField()
+    id_bad_company = models.CurrencyField()
     seller_contact_x = models.BooleanField()
     seller_contact_y = models.BooleanField()
     x_id = models.CurrencyField()
     y_id = models.CurrencyField()
     fine = models.CurrencyField()
     trad_with_bad = models.BooleanField()
-    extra_coef = models.CurrencyField()
+    extra = models.CurrencyField()
     seconds = models.IntegerField(doc="Timestamp (seconds since beginning of trading)")
 
 
 def custom_export(players):
     # Export an ExtraModel called "Trial"
 
-    yield ['session', 'table', 'group', 'round_number', 'buyer', 'seller', 'price', 'seconds']
+    yield {'session', 'table', 'group', 'round_number', 'id_bad_company', 'buyer', 'seller', 'price',
+           'seller_contact_x', 'seller_contact_y', 'x_id', 'y_id', 'fine', 'trad_with_bad', 'extra', 'seconds'}
 
     # 'filter' without any args returns everything
     trials = Transaction.filter()
@@ -151,10 +152,12 @@ def custom_export(players):
         session = buyer.session
         group = trial.group
 
-        yield [session.code, 'trades', group.id_in_subsession, buyer.round_number, buyer.participant.id_in_session,
-               seller.participant.id_in_session, trial.price, trial.seconds]
+        yield [session.code, 'trades', group.id_in_subsession, buyer.round_number, trial.id_bad_company, buyer.participant.id_in_session,
+               seller.participant.id_in_session, trial.price, seller.contact_x, seller.contact_y,
+               seller.seller_x, seller.seller_y, trial.fine, trial.trad_with_bad, trial.extra, trial.seconds]
 
-    yield ['session', 'table', 'group', 'round_number', 'trader', 'direction', 'price', 'seconds']
+    yield ['session', 'table', 'group', 'round_number', 'id_bad_company', 'trader', 'direction', 'price',
+           'seller_contact_x', 'seller_contact_y', 'x_id', 'y_id', 'fine', 'trad_with_bad', 'extra', 'seconds']
 
     # 'filter' without any args returns everything
     trials = Order.filter()
@@ -183,7 +186,10 @@ def live_method(player, data):
     players = group.get_players()
     buyers = [p for p in players if p.is_buyer]
     sellers = [p for p in players if not p.is_buyer]
+    sellers_dict = {s.id_seller: s for s in sellers}
     news = None
+    id_bad_company = Subsession.bad_id
+    extra = 0
     if data:
         if player.is_buyer:
             offer1 = int(data['offer1'])
@@ -231,12 +237,24 @@ def live_method(player, data):
             else:
                 fine = 0
             price = seller.current_offer if player.is_buyer else max(buyer.current_offer1, buyer.current_offer2, buyer.current_offer3)
-            #if seller.
-            #extra_profit
-            #extra_coef
+            if seller.contact_x:
+                contragent = sellers_dict[seller.seller_x]
+                if contragent.seller_x == seller.id_seller and contragent.contact_x \
+                        or contragent.seller_y == seller.id_seller and contragent.contact_y :
+                    seller.payoff += C.extra_coef
+                    contragent.payoff += C.extra_coef
+                    extra = C.extra_coef
 
+            if seller.contact_y:
+                contragent = sellers_dict[seller.seller_y]
+                if contragent.seller_x == seller.id_seller and contragent.contact_x \
+                        or contragent.seller_y == seller.id_seller and contragent.contact_y :
+                    seller.payoff += C.extra_coef
+                    contragent.payoff += C.extra_coef
+                    extra = C.extra_coef
             Transaction.create(
                 group=group,
+                id_bad_company=id_bad_company,
                 buyer=buyer,
                 seller=seller,
                 price=price,
@@ -246,7 +264,7 @@ def live_method(player, data):
                 x_id = seller.seller_x,
                 y_id = seller.seller_y,
                 trad_with_bad=trad_with_bad,
-
+                extra=extra,
                 seconds=int(time.time() - group.start_timestamp),
             )
             buyer.num_items += 1
@@ -255,6 +273,7 @@ def live_method(player, data):
             seller.payoff += price - seller.break_even_point
             buyer.current_offer = 0
             seller.current_offer = cu(200)
+            extra = 0
             news = dict(buyer=buyer.id_in_group, seller=seller.id_in_group, price=price, fine=fine)
 
     #bids = sorted([p.current_offer for p in buyers if p.current_offer > 0], reverse=True)
