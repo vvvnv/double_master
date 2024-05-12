@@ -9,10 +9,11 @@ class C(BaseConstants):
     NAME_IN_URL = 'double_auction'
     PLAYERS_PER_GROUP = None
     NUM_ROUNDS = 2
-    ITEMS_PER_SELLER = 3
-    ITEMS_PER_BUYER = 3
+    ITEMS_PER_SELLER = 3 #Количество товара для продажи
+    ITEMS_PER_BUYER = 3 #Количесвто товаров для покупки
     TIME_FOR_PERIOD = 5
     TIME_FOR_PERIOD1 = 20
+    fine_choise = [0, 5, 10]
 
 
 Constants = C
@@ -25,7 +26,7 @@ class Subsession(BaseSubsession):
     VALUATION_MAX = models.CurrencyField()
     num_seller = models.IntegerField()
     bad_id = models.IntegerField()
-
+    fine_choise
 
 def creating_session(subsession: Subsession):
     subsession.group_randomly()
@@ -61,6 +62,12 @@ def creating_session(subsession: Subsession):
             else:
                 p.bad_info = False
                 p.player_msg = "You are NOT a bad company"
+            p.seller_x = random.randint(1, 3) != p.id_seller
+            p.seller_y = random.randint(1, 3) != p.id_seller != p.seller_x
+            p.contact_x = False
+            p.contact_y = False
+            p.bad_conact = False
+
 
 
 def vars_for_admin_report(subsession):
@@ -87,20 +94,25 @@ class Group(BaseGroup):
 
 
 class Player(BasePlayer):
-    is_buyer = models.BooleanField()
-    break_even_point = models.CurrencyField()
-    num_items = models.IntegerField()
-    bad_info = models.BooleanField()
-    player_msg = models.StringField()
+    is_buyer = models.BooleanField()        #True - покупатель, False - продавец
+    break_even_point = models.CurrencyField()       # Ценность товара
+    num_items = models.IntegerField()       #Количество товаров
+    bad_info = models.BooleanField()        #True у продавца - плохая компания, True упокупателя - он знает какая компания плохая
+    player_msg = models.StringField()       #Информация для игрока
 
 class Buyer(Player):
-    current_offer1 = models.CurrencyField()
-    current_offer2 = models.CurrencyField()
-    current_offer3 = models.CurrencyField()
+    current_offer1 = models.CurrencyField() #Предложение цены для продавца 1
+    current_offer2 = models.CurrencyField() #Предложение цены для продавца 2
+    current_offer3 = models.CurrencyField() #Предложение цены для продавца 3
 
 class Seller(Player):
-    id_seller = models.IntegerField()
-    current_offer = models.CurrencyField()
+    id_seller = models.IntegerField()   #Id продавца
+    current_offer = models.CurrencyField()  #Предложение цены для своего товара
+    seller_x = models.IntegerField()    #Id продавца х
+    seller_y = models.IntegerField()    #Id продавца у
+    contact_x = models.BooleanField()   #Соглашение с продавцом х
+    contact_y = models.BooleanField()   #Соглашение с продавцом у
+    bad_conact = models.BooleanField()  #Соглашение с плохим продавцом
 
 class Order(ExtraModel):
     group = models.Link(Group)
@@ -115,7 +127,14 @@ class Transaction(ExtraModel):
     buyer = models.Link(Buyer)
     seller = models.Link(Seller)
     price = models.CurrencyField()
+    extra_profit = models.CurrencyField()
+    seller_contact_x = models.BooleanField()
+    seller_contact_y = models.BooleanField()
+    x_id = models.CurrencyField()
+    y_id = models.CurrencyField()
     fine = models.CurrencyField()
+    trad_with_bad = models.BooleanField()
+    extra_coef = models.CurrencyField()
     seconds = models.IntegerField(doc="Timestamp (seconds since beginning of trading)")
 
 
@@ -208,16 +227,26 @@ def live_method(player, data):
             [buyer, seller] = match
             trad_with_bad = seller.bad_info
             if trad_with_bad:
-                fine = random.randint(10, 20)
+                fine = random.choice(C.fine_choise)
             else:
                 fine = 0
             price = seller.current_offer if player.is_buyer else max(buyer.current_offer1, buyer.current_offer2, buyer.current_offer3)
+            #if seller.
+            #extra_profit
+            #extra_coef
+
             Transaction.create(
                 group=group,
                 buyer=buyer,
                 seller=seller,
                 price=price,
                 fine=fine,
+                seller_contact_x=seller.contact_x,
+                seller_contact_y = seller.contact_y,
+                x_id = seller.seller_x,
+                y_id = seller.seller_y,
+                trad_with_bad=trad_with_bad,
+
                 seconds=int(time.time() - group.start_timestamp),
             )
             buyer.num_items += 1
