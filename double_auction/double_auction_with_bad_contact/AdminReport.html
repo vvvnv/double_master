@@ -1,0 +1,39 @@
+﻿<h3>Дилемма Заключенного результаты</h3>
+
+
+<table class="table">
+    <thead>
+        <tr>
+    <th>Раунд</th>
+    {% for num in round_numbers %}
+                <th>{{ num }}</th>
+    {% endfor %}
+        </tr>
+    </thead>
+     <tbody> 
+      <tr>
+            <td></td>
+            {% for dat in period_data %}
+                <td>{{ dat }}</td>
+            {% endfor %}
+      </tr>
+</table>
+<p></p>
+<table class="table">
+    <thead>
+        <tr>
+    {% for dat_lb in game_data.0 %}
+                <th>{{ dat_lb }}</th>
+    {% endfor %}
+        </tr>
+    </thead>
+     <tbody> 
+    {% for field in game_data %}
+        {% if field.ID == 0 %} <tr style="background-color: #666666;color: #ffffff;"> {% else %} <tr> {% endif %}
+            {% for dat in field.values %}
+                <td>{{ dat }}</td>
+            {% endfor %}
+        </tr>
+    {% endfor %}
+</table>
+

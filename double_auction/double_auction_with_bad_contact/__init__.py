@@ -26,11 +26,11 @@ class Subsession(BaseSubsession):
     VALUATION_MIN = models.CurrencyField()
     VALUATION_MAX = models.CurrencyField()
     num_seller = models.IntegerField()
-    bad_id = models.IntegerField()
+    bad_id = models.CurrencyField()
 
 
 def creating_session(subsession: Subsession):
-    subsession.group_randomly()
+    # subsession.group_randomly()
     players = subsession.get_players()
 
     subsession.PRODUCTION_COSTS_MIN = cu(10)
@@ -38,7 +38,6 @@ def creating_session(subsession: Subsession):
     subsession.VALUATION_MIN = cu(50)
     subsession.VALUATION_MAX = cu(110)
     subsession.num_seller = cu(3)
-    subsession.bad_id = int(random.randint(1, subsession.num_seller))
 
     for p in players:
         # this means if the player's ID is not a multiple of 2, they are a buyer.
@@ -57,17 +56,26 @@ def creating_session(subsession: Subsession):
             p.num_items = C.ITEMS_PER_SELLER
             p.id_seller = p.id_in_group
             p.break_even_point = random.randint(subsession.PRODUCTION_COSTS_MIN, subsession.PRODUCTION_COSTS_MAX)
-            if p.id_in_group == subsession.bad_id:
+            if p.id_in_group in subsession.bad_id:
                 p.bad_info = True
                 p.player_msg = "You are a bad company"
             else:
                 p.bad_info = False
                 p.player_msg = "You are NOT a bad company"
-            p.seller_x = random.randint(1, subsession.num_seller) != p.id_seller # todo
+            p.seller_x = random.randint(1, subsession.num_seller) != p.id_seller  # todo
             p.seller_y = random.randint(1, subsession.num_seller) != p.id_seller != p.seller_x
             p.contact_x = False
             p.contact_y = False
             p.bad_conact = False
+
+
+def create_round(subsession):
+    print('session id', id(subsession.session))
+
+    if subsession.round_number == 1:
+        subsession.bad_id = [int(random.randint(1, subsession.num_seller))]
+    else:
+        pass
 
 
 def vars_for_admin_report(subsession):
@@ -114,7 +122,7 @@ class Seller(Player):
     seller_y = models.IntegerField()  # Id продавца у
     contact_x = models.BooleanField()  # Соглашение с продавцом х
     contact_y = models.BooleanField()  # Соглашение с продавцом у
-    bad_conact = models.BooleanField()  # Соглашение с плохим продавцом
+    bad_contact = models.BooleanField()  # Соглашение с плохим продавцом
 
 
 class Order(ExtraModel):
@@ -245,8 +253,145 @@ def live_method(player, data):
             [buyer, seller] = match
             trade_with_bad = seller.bad_info
             fine = random.choice(C.fine_choice) if trade_with_bad else 0
-            price = seller.current_offer if player.is_buyer else max(buyer.current_offer1, # fixme (pick c_id)
-                                                                     buyer.current_offer2, #fixme todo
+            price = seller.current_offer if player.is_buyer else max(buyer.current_offer1,  # fixme (pick c_id)
+                                                                     buyer.current_offer2,  # fixme todo
+                                                                     buyer.current_offer3)
+            if seller.contact_x:
+                contragent = sellers_dict[seller.seller_x]
+                if contragent.seller_x == seller.id_seller and contragent.contact_x \
+                        or contragent.seller_y == seller.id_seller and contragent.contact_y:
+                    seller.payoff += C.extra_coef
+                    contragent.payoff += C.extra_coef
+                    extra = C.extra_coef
+                    if seller.bad_info or contragent.bad_info:
+                        Subsession.bad_id.extend(seller.id_seller, contragent.id_seller)
+                elif contragent.seller_x == seller.id_seller and contragent.contact_x is False \
+                        or contragent.seller_y == seller.id_seller and contragent.contact_y is False:
+                    if seller.bad_info:
+                        Subsession.bad_id.remove(contragent.id_seller)
+                    elif contragent.bad_info:
+                        Subsession.bad_id.remove(seller.id_seller)
+
+            if seller.contact_y:
+                contragent = sellers_dict[seller.seller_y]
+                if contragent.seller_x == seller.id_seller and contragent.contact_x \
+                        or contragent.seller_y == seller.id_seller and contragent.contact_y:
+                    seller.payoff += C.extra_coef
+                    contragent.payoff += C.extra_coef
+                    extra = C.extra_coef
+                    if seller.bad_info or contragent.bad_info:
+                        subsession.bad_id.extend(seller.id_seller, contragent.id_seller)
+                elif contragent.seller_y == seller.id_seller and contragent.contact_x == False \
+                        or contragent.seller_y == seller.id_seller and contragent.contact_y == False:
+                    if seller.bad_info:
+                        subsession.bad_id.remove(contragent.id_seller)
+                    elif contragent.bad_info:
+                        subsession.bad_id.remove(seller.id_seller)
+
+            Transaction.create(
+                group=group,
+                id_bad_company=id_bad_company,
+                buyer=buyer,
+                seller=seller,
+                price=price,
+                fine=fine,
+                seller_contact_x=seller.contact_x,
+                seller_contact_y=seller.contact_y,
+                x_id=seller.seller_x,
+                y_id=seller.seller_y,
+                trade_with_bad=trade_with_bad,
+                extra=extra,
+                seconds=int(time.time() - group.start_timestamp),
+            )
+            buyer.num_items += 1
+            seller.num_items -= 1
+            buyer.payoff += buyer.break_even_point - price - fine
+            seller.payoff += price - seller.break_even_point
+            buyer.current_offer = 0
+            seller.current_offer = cu(200)
+            extra = 0
+            news = dict(buyer=buyer.id_in_group, seller=seller.id_in_group, price=price, fine=fine)
+
+    # bids = sorted([p.current_offer for p in buyers if p.current_offer > 0], reverse=True)
+    # asks = sorted([p.current_offer for p in sellers if p.current_offer < cu(200)])
+    # highcharts_series = [[tx.seconds, tx.price] for tx in Transaction.filter(group=group)]
+
+
+#
+# return {
+#    p.id_in_group: dict(
+#        num_items=p.num_items,
+#        current_offer=p.current_offer,
+#        payoff=p.payoff,
+#        bids=bids,
+#        asks=asks,
+#        highcharts_series=highcharts_series,
+#        news=news,
+#    )
+#    for p in players
+# }
+
+def live_method(player, data):
+    group = player.group
+    players = group.get_players()
+    buyers = [p for p in players if p.is_buyer]
+    sellers = [p for p in players if not p.is_buyer]
+    sellers_dict = {s.id_seller: s for s in sellers}
+    news = None
+    id_bad_company = Subsession.bad_id
+    extra = 0
+    order_needed = True
+    if data:
+        if player.is_buyer:
+            if player.num_items >= C.ITEMS_PER_BUYER:
+                player.current_offer1 = 0
+                player.current_offer2 = 0
+                player.current_offer3 = 0
+                order_needed = False
+            else:
+                offer1 = int(data['offer1'])
+                offer2 = int(data['offer2'])
+                offer3 = int(data['offer3'])
+                if offer1 != 0:
+                    offer_price = offer1
+                    c_id = 1
+                elif offer2 != 0:
+                    offer_price = offer2
+                    c_id = 2
+                else:
+                    offer_price = offer3
+                    c_id = 3
+                player.current_offer1 = offer1
+                player.current_offer2 = offer2
+                player.current_offer3 = offer3
+
+        else:
+            offer_price = int(data['offer'])
+            player.contact_x = bool(data['contact_x'])
+            player.contact_y = bool(data['contact_y'])
+            player.current_offer = offer_price
+            c_id = player.id_seller
+            if player.num_items == 0:
+                player.current_offer = cu(200)
+        if order_needed:
+            Order.create(
+                group=group,
+                trader=player,
+                buysell=1 if player.is_buyer else -1,
+                company_id=c_id,
+                price=offer_price,
+                seconds=int(time.time() - group.start_timestamp),
+            )
+        if player.is_buyer:
+            match = find_match(buyers=[player], sellers=sellers)
+        else:
+            match = find_match(buyers=buyers, sellers=[player])
+        if match:
+            [buyer, seller] = match
+            trade_with_bad = seller.bad_info
+            fine = random.choice(C.fine_choice) if trade_with_bad else 0
+            price = seller.current_offer if player.is_buyer else max(buyer.current_offer1,  # fixme (pick c_id)
+                                                                     buyer.current_offer2,  # fixme todo
                                                                      buyer.current_offer3)
             if seller.contact_x:
                 contragent = sellers_dict[seller.seller_x]
@@ -305,8 +450,6 @@ def live_method(player, data):
 #    )
 #    for p in players
 # }
-
-
 # PAGES
 class Introduction(Page):
     @staticmethod
