@@ -12,12 +12,13 @@ class C(BaseConstants):
     SELLER_NUM = 3  # Количество продавцов
     ITEMS_PER_SELLER = 3  # Количество товара для продажи
     ITEMS_PER_BUYER = 3  # Количесвто товаров для покупки
-    TIME_FOR_PERIOD = 60*0.5
-    TIME_FOR_PERIOD1 = 60*0.5
+    TIME_FOR_PERIOD = 60 * 0.5
+    TIME_FOR_PERIOD1 = 60 * 0.5
     MAX_VAL = 200
     FINE_CHOISE = [0, 5, 10]
     # extra_coef = 10
     COMPANY_NAMES = ['A', 'B', 'C']
+    PROFIT_PER_CONTRACT = 2
 
 
 Constants = C
@@ -85,8 +86,9 @@ class Player(BasePlayer):
     num_items = models.IntegerField(initial=0)  # количество товаров купленное/проданное
     num_items_from_bad = models.IntegerField(initial=0)  # количество товаров купленное/проданное
     extra_charge_for_bad = models.CurrencyField()  # сколько дополнительно списать с покупателя если купил у плохой компании
-    trade_vol = models.CurrencyField(
-        initial=cu(0))  # сколько дополнительно списать с покупателя если купил у плохой компании
+    trade_vol = models.CurrencyField(initial=cu(0))  # выручка от продажи / расходы на покупку
+    contracts_volume = models.IntegerField(initial=0)  # количество товаров учитываемое в дополнительных контрактах
+    costs = models.CurrencyField(initial=cu(0))  # себестоимость продаж / выкупная стоимость купленных
     # bad_info = models.BooleanField()        #True у продавца - плохая компания, True упокупателя - он знает какая компания плохая
     # player_msg = models.StringField()       #Информация для игрока
 
@@ -100,8 +102,12 @@ class Player(BasePlayer):
     current_offer_time3 = models.FloatField(initial=0)  # Предложение цены для продавца 3
     sell_count_offer = models.IntegerField(initial=0)  # количество единиц товара на продажу по текущей заявке
 
-    change_contract_1 = models.BooleanField(initial=False)  # изменить соглашение с продавцом с минимальным id
-    change_contract_2 = models.BooleanField(initial=False)  # изменить соглашение с продавцом с максимальным id
+    change_contract_12 = models.BooleanField(blank=True,
+                                             initial=False)  # изменить соглашение с продавцом с минимальным id
+    change_contract_13 = models.BooleanField(blank=True,
+                                             initial=False)  # изменить соглашение с продавцом с максимальным id
+    change_contract_23 = models.BooleanField(blank=True,
+                                             initial=False)  # изменить соглашение с продавцом с максимальным id
 
 
 def init_group(group: Group, keep_info_from_last=False):
@@ -146,6 +152,38 @@ def init_player(player: Player):
             item_id=i,
             item_value=v
         )
+
+
+def calc_profit_group(group: Group):
+    players = group.get_players()
+    sellers = players[:group.subsession.num_sellers]
+    contracts = [['contract_12', (0, 1)], ['contract_13', (0, 2)], ['contract_23', (1, 2)]]
+    for c in contracts:
+        cur_state = getattr(group, c[0])
+        num_change = sum(1 for pn in c[1] if getattr(sellers[pn], 'change_' + c[0]))
+        if cur_state:
+            if num_change > 0:
+                cur_state = False
+        else:
+            if num_change == 2:
+                cur_state = True
+        setattr(group, c[0], cur_state)
+
+        if cur_state:
+            vol = sellers[c[1][0]].num_items + sellers[c[1][1]].num_items
+            sellers[c[1][0]].contracts_volume += vol
+            sellers[c[1][1]].contracts_volume += vol
+
+    for p in players:
+        calc_profit_player(p)
+
+
+def calc_profit_player(player: Player):
+    player.costs = sum(x.item_value for x in ItemsValues.filter(trader=player) if x.item_id < player.num_items)
+    if player.is_buyer:
+        player.payoff = player.costs - player.trade_vol - player.extra_charge_for_bad * player.num_items_from_bad
+    else:
+        player.payoff = player.trade_vol - player.costs + player.contracts_volume * C.PROFIT_PER_CONTRACT
 
 
 class ItemsValues(ExtraModel):
@@ -205,7 +243,7 @@ def custom_export(players):
     trials = Order.filter()
     for trial in trials:
         trader = trial.trader
-        session = buyer.session
+        session = trader.session
         group = trial.group
 
         yield [session.code, 'orders', group.id_in_subsession, trader.round_number, trader.participant.id_in_session,
@@ -252,8 +290,6 @@ def process_transaction(buyer, seller, c_id, price, quantity, buysell, news):
         company_id=c_id,
         quantity=quantity,
         buysell=buysell,
-        id_bad_company=group.bad_company_num,
-        fine=buyer.extra_charge_for_bad,
         seconds=int(time.time() - group.start_timestamp),
     )
     buyer.num_items += quantity
@@ -283,7 +319,12 @@ def live_method(player, data):
     players = group.get_players()
     news = {}
     id_bad_company = group.bad_company_num
+    extra = 0
     if data:
+        if 'field' in data:
+            print(data['value'])
+            setattr(player, data['field'], int(data['value']) == 1)
+            return None
         # format: 
         # 'offer': цена в копейках/центах
         # 'company_id': номер рынка = номер продавца
@@ -367,6 +408,17 @@ class WaitToStart(WaitPage):
 
 
 class Trading(Page):
+    form_model = 'player'
+
+    @staticmethod
+    def get_form_fields(player):
+        if player.is_buyer:
+            return []
+        else:
+            return {1: ['change_contract_13', 'change_contract_12'],
+                    2: ['change_contract_12', 'change_contract_23'],
+                    3: ['change_contract_13', 'change_contract_23']}[player.id_in_group]
+
     live_method = live_method
 
     @staticmethod
@@ -391,7 +443,9 @@ class Trading(Page):
 
 
 class ResultsWaitPage(WaitPage):
-    pass
+    @staticmethod
+    def after_all_players_arrive(group: Group):
+        calc_profit_group(group)
 
 
 class Results(Page):

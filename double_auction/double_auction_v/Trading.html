@@ -91,7 +91,6 @@
 <div class="price_block">
     <div class="block">
         Продавец A<br>
-
         {{ if player.is_buyer }}            
             <span>Ваше предложение <span id="current_offer1"></span></span></br>
             <div class="input-group">
@@ -106,12 +105,23 @@
                 <input id="my_offer_vol" type="number" placeholder="Объем" class="price-input">
                 <button type="button" id="btnOffer1" onclick="sendOffer(1)">Отправить</button>
             </div>            
+            {{ else }}
+            {{ if group.contract_23 }} Контракт заключен {{ else }} Контракт не заключен {{ endif }}
+            <div class="input-group">
+                <p>{{ if group.contract_23 }} Расторгнуть контракт? {{ else }} Попытаться заключить контракт? {{ endif }}</p>
+                <label>
+                    <input type="radio" name="change_contract_23" value="1" onchange="sendField(this)"> Да
+                </label>
+                <label>
+                    <input type="radio" name="change_contract_23" value="0" onchange="sendField(this)" checked> Нет
+                </label>
+
+            </div>     
             {{ endif }}
         {{ endif }}
     </div>
     <div class="block">
         Продавец B<br>
-
         {{ if player.is_buyer }}            
             <span>Ваше предложение <span id="current_offer2"></span></span></br>
             <div class="input-group">
@@ -125,7 +135,23 @@
                 <input id="my_offer2" type="number" placeholder="Цена" class="price-input">
                 <input id="my_offer_vol" type="number" placeholder="Объем" class="price-input">
                 <button type="button" id="btnOffer2" onclick="sendOffer(2)">Отправить</button>
-            </div>            
+            </div>   
+            {{ else }}
+            {{ if group.contract_13 }} Контракт заключен {{ else }} Контракт не заключен {{ endif }}
+            <div class="input-group">
+                <!-- <label>
+                    <input name="change_contract_13" onchange="sendField(this)" type="checkbox" />
+                    {{ if group.contract_13 }} Расторгнуть контракт {{ else }} Попытаться заключить контракт {{ endif }}
+                </label> -->
+                <p>{{ if group.contract_13 }} Расторгнуть контракт? {{ else }} Попытаться заключить контракт? {{ endif }}</p>
+                <label>
+                    <input type="radio" name="change_contract_13" value="1" onchange="sendField(this)"> Да
+                </label>
+                <label>
+                    <input type="radio" name="change_contract_13" value="0" onchange="sendField(this)" checked> Нет
+                </label>
+
+            </div>                       
             {{ endif }}
         {{ endif }}
     </div>
@@ -146,21 +172,41 @@
                 <input id="my_offer_vol" type="number" placeholder="Объем" class="price-input">
                 <button type="button" id="btnOffer3" onclick="sendOffer(3)">Отправить</button>
             </div>            
+            {{ else }}
+            {{ if group.contract_12 }} Контракт заключен {{ else }} Контракт не заключен {{ endif }}
+            <div class="input-group">
+                <p>{{ if group.contract_12 }} Расторгнуть контракт? {{ else }} Попытаться заключить контракт? {{ endif }}</p>
+                <label>
+                    <input type="radio" name="change_contract_12" value="1" onchange="sendField(this)"> Да
+                </label>
+                <label>
+                    <input type="radio" name="change_contract_12" value="0" onchange="sendField(this)" checked> Нет
+                </label>
+                
+            </div>                       
             {{ endif }}
         {{ endif }}        
     </div>
 </div>
+
+<script>
+
+function sendField(input) {
+  liveSend({'field': input.name, 'value': input.value});
+}
+</script>
+
 <div class="price_block">
     <div class="block">
         <div class="display-area">
             <div class="container">
                 <div class="row">
                     <div class="col-sm">
-                        <h4>Bids</h4>
+                        <strong>Bids</strong>
                         <table id="bids_table1"></table>
                     </div>
                     <div class="col-sm">
-                        <h4>Asks</h4>
+                        <strong>Asks</strong>
                         <table id="asks_table1"></table>
                     </div>
                 </div>
@@ -172,11 +218,11 @@
             <div class="container">
                 <div class="row">
                     <div class="col-sm">
-                        <h4>Bids</h4>
+                        <strong>Bids</strong>
                         <table id="bids_table2"></table>
                     </div>
                     <div class="col-sm">
-                        <h4>Asks</h4>
+                        <strong>Asks</strong>
                         <table id="asks_table2"></table>
                     </div>
                 </div>
@@ -188,11 +234,11 @@
             <div class="container">
                 <div class="row">
                     <div class="col-sm">
-                        <h4>Bids</h4>
+                        <strong>Bids</strong>
                         <table id="bids_table3"></table>
                     </div>
                     <div class="col-sm">
-                        <h4>Asks</h4>
+                        <strong>Asks</strong>
                         <table id="asks_table3"></table>
                     </div>
                 </div>
