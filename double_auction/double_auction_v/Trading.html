@@ -1,0 +1,294 @@
+{{ block content }}
+
+<p id="news" style="color: green"></p>
+
+<table class="table">
+    <tr>
+        <td>Ваша роль</td>
+        <th>
+            {{ if player.is_buyer }}покупатель{{ else }}продавец {{name}} {{ endif }}
+        </th>
+    </tr>
+    <tr>
+        <td>Информация</td>
+        <th>
+            {{player_msg}}
+        </th>
+    </tr>
+    {{ if player.is_buyer }}
+    <tr>
+        <td>Штраф за покупку у плохой компании</td>
+        <th>{{player.extra_charge_for_bad}}</th>
+    </tr>   
+    {{ endif }} 
+    <tr>
+        <td>Количество товаров у вас</td>
+        <th id="num_items"></th>
+    </tr>
+</table>
+<strong>{{ if player.is_buyer }}Выкупная стоимость{{ else }} Себестоимость производства {{ endif }}</strong> <br>
+<table class="table" id="item_vals_table">
+    <thead>
+        <tr>
+            {% for dat_lb in item_vals %}
+            <th>{{ dat_lb }}</th>
+{% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        <tr> 
+            {% for dat in item_vals.values %}
+                <td>{{ dat }}</td>
+            {% endfor %}
+        </tr>
+    </tbody>
+
+</table>
+
+<style>
+    .container {
+        max-width: 95%;
+    }
+    .price_block {
+        display: flex;
+        justify-content: space-around;
+    }
+    .block {
+        /* border: 1px solid black; */
+        padding: 5px;
+        width: 30%;
+    }
+    .input-group {
+        margin-bottom: 10px;
+        display: flex; align-items: center; gap: 10px;
+    }
+    .price-input {
+        width: 35%
+    }
+    .send-button {
+        width: 25%
+    }
+    .display-area {
+        height: 100px;
+        border: 1px solid grey;
+        margin-top: 5px;
+        padding: 5px;
+        overflow-y: auto;
+    }
+    .table>:not(caption)>*>* {
+        padding: 1px;
+    }    
+    p {
+        margin-top: 2px; /* Reduces space above each <p> */
+        margin-bottom: 2px; /* Reduces space below each <p> */
+    }
+    .alert {
+        padding: 0.4rem;
+    }
+</style>
+
+
+<div class="price_block">
+    <div class="block">
+        Продавец A<br>
+
+        {{ if player.is_buyer }}            
+            <span>Ваше предложение <span id="current_offer1"></span></span></br>
+            <div class="input-group">
+                <input id="my_offer1" type="number" placeholder="Цена">
+                <button type="button" id="btnOffer1" onclick="sendOffer(1)">Отправить</button>
+            </div>
+        {{ else }}
+            {{ if player.id_in_group == 1 }}
+            <span>Ваше предложение <span id="current_offer1"></span></span></br>
+            <div class="input-group">
+                <input id="my_offer1" type="number" placeholder="Цена" class="price-input">
+                <input id="my_offer_vol" type="number" placeholder="Объем" class="price-input">
+                <button type="button" id="btnOffer1" onclick="sendOffer(1)">Отправить</button>
+            </div>            
+            {{ endif }}
+        {{ endif }}
+    </div>
+    <div class="block">
+        Продавец B<br>
+
+        {{ if player.is_buyer }}            
+            <span>Ваше предложение <span id="current_offer2"></span></span></br>
+            <div class="input-group">
+                <input id="my_offer2" type="number" placeholder="Цена">
+                <button type="button" id="btnOffer2" onclick="sendOffer(2)">Отправить</button>
+            </div>
+        {{ else }}
+            {{ if player.id_in_group == 2 }}
+            <span>Ваше предложение <span id="current_offer2"></span></span></br>
+            <div class="input-group">
+                <input id="my_offer2" type="number" placeholder="Цена" class="price-input">
+                <input id="my_offer_vol" type="number" placeholder="Объем" class="price-input">
+                <button type="button" id="btnOffer2" onclick="sendOffer(2)">Отправить</button>
+            </div>            
+            {{ endif }}
+        {{ endif }}
+    </div>
+    <div class="block">
+        Продавец C<br>
+
+        {{ if player.is_buyer }}            
+            <span>Ваше предложение <span id="current_offer3"></span></span></br>
+            <div class="input-group">
+                <input id="my_offer3" type="number" placeholder="Цена">
+                <button type="button" id="btnOffer3" onclick="sendOffer(3)">Отправить</button>
+            </div>
+        {{ else }}
+            {{ if player.id_in_group == 3 }}
+            <span>Ваше предложение <span id="current_offer3"></span></span></br>
+            <div class="input-group">
+                <input id="my_offer3" type="number" placeholder="Цена" class="price-input">
+                <input id="my_offer_vol" type="number" placeholder="Объем" class="price-input">
+                <button type="button" id="btnOffer3" onclick="sendOffer(3)">Отправить</button>
+            </div>            
+            {{ endif }}
+        {{ endif }}        
+    </div>
+</div>
+<div class="price_block">
+    <div class="block">
+        <div class="display-area">
+            <div class="container">
+                <div class="row">
+                    <div class="col-sm">
+                        <h4>Bids</h4>
+                        <table id="bids_table1"></table>
+                    </div>
+                    <div class="col-sm">
+                        <h4>Asks</h4>
+                        <table id="asks_table1"></table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="block">
+        <div class="display-area">
+            <div class="container">
+                <div class="row">
+                    <div class="col-sm">
+                        <h4>Bids</h4>
+                        <table id="bids_table2"></table>
+                    </div>
+                    <div class="col-sm">
+                        <h4>Asks</h4>
+                        <table id="asks_table2"></table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="block">
+        <div class="display-area">
+            <div class="container">
+                <div class="row">
+                    <div class="col-sm">
+                        <h4>Bids</h4>
+                        <table id="bids_table3"></table>
+                    </div>
+                    <div class="col-sm">
+                        <h4>Asks</h4>
+                        <table id="asks_table3"></table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+
+    let bids_table = [document.getElementById('bids_table1'), document.getElementById('bids_table2'), document.getElementById('bids_table3')];
+    let asks_table = [document.getElementById('asks_table1'), document.getElementById('asks_table2'), document.getElementById('asks_table3')];
+    let my_id = js_vars.id_in_group;
+    let news_div = document.getElementById('news');
+    let is_buyer = js_vars.is_buyer;
+    let buyer_num = js_vars.buyer_num;
+    let last_num_items = 0;
+    let item_vals_table = document.getElementById('item_vals_table')
+    let item_vals_table_row = item_vals_table.rows[1];
+    // let btnOffer = document.getElementById('btn-offer');
+    // let my_offer = [document.getElementById('my_offer1'),document.getElementById('my_offer2'),document.getElementById('my_offer3')];
+
+    function showNews(msg) {
+        news_div.innerText = msg;
+        setTimeout(function () {
+            news_div.innerText = ''
+        }, 10000)
+    }
+
+    function cu(amount) {
+        return `${amount}`;
+    }
+
+    function liveRecv(data) {
+        console.log(data)
+        // javascript destructuring assignment
+        let {bids, asks, highcharts_series, num_items, num_items_left, current_offer1, current_offer2, current_offer3, sell_count_offer, news} = data;
+        if (news) {
+            let {price, quantity} = news;
+            if (is_buyer) {
+                showNews(`Вы купили ${quantity} единиц по цене ${cu(price)}`);
+            } else {
+                showNews(`Вы продали ${quantity} единиц по цене ${cu(price)}`);
+            }
+        }
+        if (num_items > last_num_items) {
+            for (var i = last_num_items; i < num_items; i++) { // cell indices are zero-indexed, so start from 2 to 4
+                item_vals_table_row.cells[i].style.backgroundColor = 'green';
+            }    
+            last_num_items = num_items; 
+        }
+        document.getElementById('num_items').innerText = num_items + ' (' + (num_items+num_items_left) + ')';
+        if (is_buyer) {
+            document.getElementById('current_offer1').innerText = cu(current_offer1);
+            document.getElementById('current_offer2').innerText = cu(current_offer2);
+            document.getElementById('current_offer3').innerText = cu(current_offer3);
+        } else {
+            document.getElementById('current_offer'+my_id).innerText = cu(current_offer1)+' - '+sell_count_offer;
+        }
+        // document.getElementById('current_offer').innerText = cu(current_offer);
+        // document.getElementById('payoff').innerText = cu(payoff);
+        if (num_items_left === 0) {
+            if (is_buyer) {
+                document.getElementById('btnOffer1').disabled = true;
+                document.getElementById('btnOffer2').disabled = true;
+                document.getElementById('btnOffer3').disabled = true;
+            } else {
+                document.getElementById('btnOffer'+my_id).disabled = true;
+            }
+        }
+        bids_table.forEach((table, index) => {
+                // Ensure the values array has an element for this index
+                if (bids[index] !== undefined) {
+                    table.innerHTML = bids[index].map(e => `<tr><td>${cu(e)}</td></tr>`).join('');
+                }
+            });
+        asks_table.forEach((table, index) => {
+            // Ensure the values array has an element for this index
+            if (bids[index] !== undefined) {
+                table.innerHTML = asks[index].map(e => `<tr><td>${cu(e)}</td></tr>`).join('');
+            }
+        });            
+        // redrawChart(highcharts_series);
+    }
+
+    function sendOffer(i) {
+        if (is_buyer) {
+            liveSend({'offer': document.getElementById('my_offer'+i).value*100, 'company_id':i, 'quantity':1})
+        } else {
+            liveSend({'offer': document.getElementById('my_offer'+i).value*100, 'company_id':i, 
+            'quantity':document.getElementById('my_offer_vol').value})
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', (event) => {
+        liveSend({});
+    });
+</script>
+
+{{ endblock }}
