@@ -223,7 +223,8 @@ def calc_profit_group(group: Group):
                     if i+1 == 2:
                         group.bad_2 = cur_state
                     if i+1 == 3:
-                        group.bad_3 = cur_state                    
+                        group.bad_3 = cur_state
+
         if cur_state:
             vol = sellers[c[1][0]].num_items + sellers[c[1][1]].num_items
             sellers[c[1][0]].contracts_volume += vol
@@ -276,7 +277,7 @@ class Transaction(ExtraModel):
 def custom_export(players):
     # Export an ExtraModel called "Trial"
 
-    yield {'session', 'table', 'group', 'round_number', 'buyer', 'seller', 'company_id', 'price', 'quantity', 'buysell', 'id_bad_company', 'fine', 'seconds'}
+    yield ['session', 'table', 'group', 'round_number', 'buyer', 'seller', 'company_id', 'price', 'quantity', 'buysell', 'id_bad_company', 'fine', 'seconds']
 
     # 'filter' without any args returns everything
     trials = Transaction.filter()
@@ -288,7 +289,7 @@ def custom_export(players):
 
         yield [session.code, 'trades', group.id_in_subsession, buyer.round_number, buyer.participant.id_in_session, seller.participant.id_in_session, trial.company_id, trial.price, trial.quantity, trial.id_bad_company,trial.fine, trial.seconds]
 
-    yield ['session', 'table', 'group', 'round_number', 'buyer', 'seller', 'company_id', 'price', 'quantity', 'buysell', 'id_bad_company', 'fine', 'seconds']
+    yield ['session', 'table', 'group', 'round_number', 'trader_id', 'buysell', 'price', 'seconds']
 
     # 'filter' without any args returns everything
     trials = Order.filter()

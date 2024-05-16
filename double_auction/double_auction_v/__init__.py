@@ -216,7 +216,7 @@ class Transaction(ExtraModel):
 def custom_export(players):
     # Export an ExtraModel called "Trial"
 
-    yield {'session', 'table', 'group', 'round_number', 'buyer', 'seller', 'company_id', 'price', 'quantity', 'buysell', 'id_bad_company', 'fine', 'seconds'}
+    yield ['session', 'table', 'group', 'round_number', 'buyer', 'seller', 'company_id', 'price', 'quantity', 'buysell', 'id_bad_company', 'fine', 'seconds']
 
     # 'filter' without any args returns everything
     trials = Transaction.filter()
@@ -226,11 +226,9 @@ def custom_export(players):
         session = buyer.session
         group = trial.group
 
-        yield [session.code, 'trades', group.id_in_subsession, buyer.round_number, buyer.participant.id_in_session,
-               seller.participant.id_in_session, trial.company_id, trial.price, trial.quantity, trial.id_bad_company,
-               trial.fine, trial.seconds]
+        yield [session.code, 'trades', group.id_in_subsession, buyer.round_number, buyer.participant.id_in_session, seller.participant.id_in_session, trial.company_id, trial.price, trial.quantity, trial.id_bad_company,trial.fine, trial.seconds]
 
-    yield ['session', 'table', 'group', 'round_number', 'buyer', 'seller', 'company_id', 'price', 'quantity', 'buysell','id_bad_company', 'fine', 'seconds']
+    yield ['session', 'table', 'group', 'round_number', 'trader_id', 'buysell', 'price', 'seconds']
 
     # 'filter' without any args returns everything
     trials = Order.filter()
@@ -441,7 +439,7 @@ class Trading(Page):
         contracts = get_contracts(player.id_in_group)
         contracts_state = get_contract_state(player.group, player.id_in_group)
         return {'name': (get_company_name(player.id_in_group) if not player.is_buyer else ''),
-                'player_msg': 'плохая компания: ' + get_bad_name(player.group),
+                'player_msg': 'плохая компания: ' + get_company_name(player.group.bad_company_num),
                 'item_vals': {(i + 1): itm.item_value for i, itm in enumerate(ItemsValues.filter(trader=player))},
                 'companies': [{'id':i+1,
                                 'name':get_company_name(i+1),
