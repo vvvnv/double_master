@@ -6,7 +6,7 @@ doc = "Double auction market"
 
 
 class C(BaseConstants):
-    NAME_IN_URL = 'double_auction_v'
+    NAME_IN_URL = 'double_auction_sec'
     PLAYERS_PER_GROUP = None
     NUM_ROUNDS = 3
     SELLER_NUM = 3  # Количество продавцов
@@ -28,20 +28,23 @@ def get_company_name(company_id):
     return C.COMPANY_NAMES[company_id - 1]
 
 
-def get_bad_name(bad_1, bad_2, bad_3):
-    print(bad_1, bad_2, bad_3)
+def get_bad_name(group):
+    
+    print(group.def_bad_company_num, group.bad_1, group.bad_2, group.bad_3)
     res = []
-    if bad_1:
+    if group.bad_1 and group.def_bad_company_num != 1:
         res.append(1)
-    if bad_2:
+    if group.bad_2 and group.def_bad_company_num != 2:
         res.append(2)
-    if bad_3:
+    if group.bad_3 and group.def_bad_company_num != 3:
         res.append(3)
     names = []
     for i in res:
         names.append(C.COMPANY_NAMES[i - 1])
     print(names)
-    return ",".join(names)
+    if len(names) > 0:
+        return get_company_name(group.def_bad_company_num) + " дополнительно: "+",".join(names)
+    return get_company_name(group.def_bad_company_num)
 
 
 class Subsession(BaseSubsession):
@@ -50,6 +53,7 @@ class Subsession(BaseSubsession):
     VALUATION_MIN = models.IntegerField()
     VALUATION_MAX = models.IntegerField()
     num_sellers = models.IntegerField()
+    keep_last = models.BooleanField()
 
 
 def creating_session(subsession: Subsession):
@@ -59,10 +63,11 @@ def creating_session(subsession: Subsession):
     subsession.VALUATION_MAX = 60
     subsession.num_sellers = C.SELLER_NUM
 
-    for g in subsession.get_groups():
-        init_group(g, False)
-    for p in subsession.get_players():
-        init_player(p)
+    subsession.keep_last = subsession.round_number % 3 != 1 
+    if subsession.keep_last:
+        subsession.group_like_round(subsession.round_number-1)
+    else:
+        subsession.group_randomly()
 
 
 def vars_for_admin_report(subsession):
@@ -126,7 +131,7 @@ class Player(BasePlayer):
 
 
 def init_group(group: Group, keep_info_from_last=True):
-    if keep_info_from_last and (group.round_number == 2):
+    if keep_info_from_last and (group.round_number > 1):
         # копируем соглашения из прошлого раунда
         prev_group = group.in_round(group.round_number - 1)
         group.contract_12 = prev_group.contract_12
@@ -176,10 +181,7 @@ def init_player(player: Player):
         if player.id_in_group == 3 and group.bad_3:
             player.is_bad = True
 
-    if group.round_number == 3:
-        player.extra_charge_for_bad = random.choice(C.FINE_CHOISE3)  # cu
-    else:
-        player.extra_charge_for_bad = random.choice(C.FINE_CHOISE)
+    player.extra_charge_for_bad = random.choice(C.FINE_CHOISE)  # cu
 
     sorted_list = sorted(random_list, reverse=player.is_buyer)
     player.num_items_left = len(sorted_list)
@@ -205,44 +207,23 @@ def calc_profit_group(group: Group):
         if cur_state:
             if num_change > 0:
                 cur_state = False
-                for i in range(0, 2):
-                    if sellers[c[1][i]].id_in_group != def_bad:
-                        if sellers[c[1][i]].id_in_group == 1:
-                            group.bad_1 = False
-                        if sellers[c[1][i]].id_in_group == 2:
-                            group.bad_2 = False
-                        if sellers[c[1][i]].id_in_group == 3:
-                            group.bad_3 = False
-            else:
-                for i in range(0, 2):
-                    if sellers[c[1][i]].id_in_group == 1:
-                        group.bad_1 = True
-                    if sellers[c[1][i]].id_in_group == 2:
-                        group.bad_2 = True
-                    if sellers[c[1][i]].id_in_group == 3:
-                        group.bad_3 = True
-
         else:
             if num_change == 2:
                 cur_state = True
-                for i in range(0, 2):
-                    if sellers[c[1][i]].id_in_group == 1:
-                        group.bad_1 = True
-                    if sellers[c[1][i]].id_in_group == 2:
-                        group.bad_2 = True
-                    if sellers[c[1][i]].id_in_group == 3:
-                        group.bad_3 = True
-            else:
-                for i in range(0, 2):
-                    if sellers[c[1][i]].id_in_group != def_bad:
-                        if sellers[c[1][i]].id_in_group == 1:
-                            group.bad_1 = False
-                        if sellers[c[1][i]].id_in_group == 2:
-                            group.bad_2 = False
-                        if sellers[c[1][i]].id_in_group == 3:
-                            group.bad_3 = False
+
         setattr(group, c[0], cur_state)
 
+        if def_bad-1 in c[1]: # если контракт с плохой компанией
+            for i in c[1]:
+                if i != def_bad-1: # ищем вторую компанию и меняем ее состояние на состояние контракта:
+                    # если контракт заключен - то компания становится плохой
+                    # если контракт расторгнут - то компания становится хорошей
+                    if i+1 == 1:
+                        group.bad_1 = cur_state
+                    if i+1 == 2:
+                        group.bad_2 = cur_state
+                    if i+1 == 3:
+                        group.bad_3 = cur_state                    
         if cur_state:
             vol = sellers[c[1][0]].num_items + sellers[c[1][1]].num_items
             sellers[c[1][0]].contracts_volume += vol
@@ -285,9 +266,9 @@ class Transaction(ExtraModel):
     price = models.CurrencyField()
     quantity = models.IntegerField()
     buysell = models.IntegerField()
-    seconds = models.IntegerField(doc="Timestamp (seconds since beginning of trading)")
     id_bad_company = models.StringField()
     fine = models.CurrencyField()
+    seconds = models.IntegerField(doc="Timestamp (seconds since beginning of trading)")
     # trad_with_bad = models.BooleanField()
     # extra = models.CurrencyField()
 
@@ -295,9 +276,7 @@ class Transaction(ExtraModel):
 def custom_export(players):
     # Export an ExtraModel called "Trial"
 
-    yield {'session', 'table', 'group', 'round_number', 'id_bad_company', 'buyer', 'seller', 'price', 'company_id',
-           'quantity', 'buysell',
-           'fine', 'seconds'}
+    yield {'session', 'table', 'group', 'round_number', 'buyer', 'seller', 'company_id', 'price', 'quantity', 'buysell', 'id_bad_company', 'fine', 'seconds'}
 
     # 'filter' without any args returns everything
     trials = Transaction.filter()
@@ -307,14 +286,9 @@ def custom_export(players):
         session = buyer.session
         group = trial.group
 
-        yield [session.code, 'trades', group.id_in_subsession, buyer.round_number, trial.id_bad_company,
-               buyer.participant.id_in_session,
-               seller.participant.id_in_session, trial.price, trial.company_id, trial.quantity, trial.fine,
-               trial.seconds]
+        yield [session.code, 'trades', group.id_in_subsession, buyer.round_number, buyer.participant.id_in_session, seller.participant.id_in_session, trial.company_id, trial.price, trial.quantity, trial.id_bad_company,trial.fine, trial.seconds]
 
-    yield ['session', 'table', 'group', 'round_number', 'id_bad_company', 'buyer', 'seller', 'price', 'company_id',
-           'quantity', 'buysell',
-           'fine', 'seconds']
+    yield ['session', 'table', 'group', 'round_number', 'buyer', 'seller', 'company_id', 'price', 'quantity', 'buysell', 'id_bad_company', 'fine', 'seconds']
 
     # 'filter' without any args returns everything
     trials = Order.filter()
@@ -325,6 +299,7 @@ def custom_export(players):
 
         yield [session.code, 'orders', group.id_in_subsession, trader.round_number, trader.participant.id_in_session,
                trial.buysell, trial.price, trial.seconds]
+
 
 
 def find_match(buyers, sellers):
@@ -355,6 +330,7 @@ def set_player_quote_market(player, id, val):
     setattr(player, 'current_offer' + str(id), val)
 
 
+
 def process_transaction(buyer, seller, c_id, price, quantity, buysell, news):
     group = buyer.group
     set_player_quote_market(buyer, c_id, 0)
@@ -370,13 +346,13 @@ def process_transaction(buyer, seller, c_id, price, quantity, buysell, news):
         group=group,
         buyer=buyer,
         seller=seller,
-        price=price,
         company_id=c_id,
+        price=price,
         quantity=quantity,
         buysell=buysell,
         id_bad_company=str(id_bad_company),
         fine=buyer.extra_charge_for_bad,
-        seconds=int(time.time() - group.start_timestamp),
+        seconds=int(time.time() - group.start_timestamp)
     )
     buyer.num_items += quantity
     seller.num_items += quantity
@@ -489,7 +465,28 @@ class WaitToStart(WaitPage):
     @staticmethod
     def after_all_players_arrive(group: Group):
         group.start_timestamp = int(time.time())
+        init_group(group, group.subsession.keep_last)
+        for p in group.get_players():
+            init_player(p)        
 
+
+def get_contracts(player_num):
+    if player_num == 1:
+        return ['', 'change_contract_12', 'change_contract_13']
+    if player_num == 2:
+        return ['change_contract_12', '', 'change_contract_23']
+    if player_num == 3:
+        return ['change_contract_13', 'change_contract_23', '']    
+    return ['','','']
+
+def get_contract_state(group, player_num):
+    if player_num == 1:
+        return ['', group.contract_12, group.contract_13]
+    if player_num == 2:
+        return [group.contract_12, '', group.contract_23]
+    if player_num == 3:
+        return [group.contract_13, group.contract_23, '']
+    return ['','','']
 
 class Trading(Page):
     form_model = 'player'
@@ -499,9 +496,7 @@ class Trading(Page):
         if player.is_buyer:
             return []
         else:
-            return {1: ['change_contract_13', 'change_contract_12'],
-                    2: ['change_contract_12', 'change_contract_23'],
-                    3: ['change_contract_13', 'change_contract_23']}[player.id_in_group]
+            return [a for a in get_contracts(player.id_in_group) if a != '']
 
     live_method = live_method
 
@@ -511,11 +506,17 @@ class Trading(Page):
 
     @staticmethod
     def vars_for_template(player):
+        contracts = get_contracts(player.id_in_group)
+        contracts_state = get_contract_state(player.group, player.id_in_group)
         return {'name': (get_company_name(player.id_in_group) if not player.is_buyer else ''),
-                'player_msg': 'плохая компания: ' + get_bad_name(player.group.bad_1,
-                                                                 player.group.bad_2,
-                                                                 player.group.bad_3),
-                'item_vals': {(i + 1): itm.item_value for i, itm in enumerate(ItemsValues.filter(trader=player))}}
+                'player_msg': 'плохая компания: ' + get_bad_name(player.group),
+                'item_vals': {(i + 1): itm.item_value for i, itm in enumerate(ItemsValues.filter(trader=player))},
+                'companies': [{'id':i+1, 
+                                'name':get_company_name(i+1), 
+                                'contract': contracts[i], 
+                                'contract_state':contracts_state[i]
+                            } for i in range(player.subsession.num_sellers)]
+                }
 
     @staticmethod
     def get_timeout_seconds(player: Player):
@@ -535,7 +536,7 @@ class ResultsWaitPage(WaitPage):
 
 
 class Results(Page):
-    timeout_seconds = 10
+    timeout_seconds = 20
 
 
 class TotalResultWaitPage(WaitPage):
@@ -563,4 +564,4 @@ class TotalResult(Page):
         return player.round_number == C.NUM_ROUNDS
 
 
-page_sequence = [Introduction, WaitToStart, Trading, ResultsWaitPage, Results]
+page_sequence = [Introduction, WaitToStart, Trading, ResultsWaitPage, Results, TotalResultWaitPage, TotalResult]

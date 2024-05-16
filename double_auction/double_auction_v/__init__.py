@@ -207,7 +207,7 @@ class Transaction(ExtraModel):
     quantity = models.IntegerField()
     buysell = models.IntegerField()
     seconds = models.IntegerField(doc="Timestamp (seconds since beginning of trading)")
-    id_bad_company = models.CurrencyField()
+    id_bad_company = models.IntegerField()
     fine = models.CurrencyField()
     # trad_with_bad = models.BooleanField()
     # extra = models.CurrencyField()
@@ -216,8 +216,7 @@ class Transaction(ExtraModel):
 def custom_export(players):
     # Export an ExtraModel called "Trial"
 
-    yield {'session', 'table', 'group', 'round_number', 'id_bad_company', 'buyer', 'seller', 'price', 'company_id', 'quantity', 'buysell',
-           'fine', 'seconds'}
+    yield {'session', 'table', 'group', 'round_number', 'buyer', 'seller', 'company_id', 'price', 'quantity', 'buysell', 'id_bad_company', 'fine', 'seconds'}
 
     # 'filter' without any args returns everything
     trials = Transaction.filter()
@@ -227,12 +226,11 @@ def custom_export(players):
         session = buyer.session
         group = trial.group
 
-        yield [session.code, 'trades', group.id_in_subsession, buyer.round_number, trial.id_bad_company,
-               buyer.participant.id_in_session,
-               seller.participant.id_in_session, trial.price, trial.company_id, trial.quantity, trial.fine, trial.seconds]
+        yield [session.code, 'trades', group.id_in_subsession, buyer.round_number, buyer.participant.id_in_session,
+               seller.participant.id_in_session, trial.company_id, trial.price, trial.quantity, trial.id_bad_company,
+               trial.fine, trial.seconds]
 
-    yield ['session', 'table', 'group', 'round_number', 'id_bad_company', 'buyer', 'seller', 'price', 'company_id', 'quantity', 'buysell',
-           'fine', 'seconds']
+    yield ['session', 'table', 'group', 'round_number', 'buyer', 'seller', 'company_id', 'price', 'quantity', 'buysell','id_bad_company', 'fine', 'seconds']
 
     # 'filter' without any args returns everything
     trials = Order.filter()
@@ -281,12 +279,12 @@ def process_transaction(buyer, seller, c_id, price, quantity, buysell, news):
         group=group,
         buyer=buyer,
         seller=seller,
-        price=price,
         company_id=c_id,
+        price=price,
         quantity=quantity,
         buysell=buysell,
-        fine=buyer.extra_charge_for_bad,
         id_bad_company=group.bad_company_num,
+        fine=buyer.extra_charge_for_bad,
         seconds=int(time.time() - group.start_timestamp)
     )
     buyer.num_items += quantity

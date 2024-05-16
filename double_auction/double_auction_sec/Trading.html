@@ -89,104 +89,40 @@
 
 
 <div class="price_block">
+{{ for item in companies }}
     <div class="block">
-        Продавец A<br>
+        Продавец {{item.name}}<br>
         {{ if player.is_buyer }}            
-            <span>Ваше предложение <span id="current_offer1"></span></span></br>
+            <span>Ваше предложение <span id="current_offer{{item.id}}"></span></span></br>
             <div class="input-group">
-                <input id="my_offer1" type="number" placeholder="Цена">
-                <button type="button" id="btnOffer1" onclick="sendOffer(1)">Отправить</button>
+                <input id="my_offer{{item.id}}" type="number" placeholder="Цена">
+                <button type="button" id="btnOffer{{item.id}}" onclick="sendOffer({{item.id}})">Отправить</button>
             </div>
         {{ else }}
-            {{ if player.id_in_group == 1 }}
-            <span>Ваше предложение <span id="current_offer1"></span></span></br>
+            {{ if player.id_in_group == item.id }}
+            <span>Ваше предложение <span id="current_offer{{item.id}}"></span></span></br>
             <div class="input-group">
-                <input id="my_offer1" type="number" placeholder="Цена" class="price-input">
+                <input id="my_offer{{item.id}}" type="number" placeholder="Цена" class="price-input">
                 <input id="my_offer_vol" type="number" placeholder="Объем" class="price-input">
-                <button type="button" id="btnOffer1" onclick="sendOffer(1)">Отправить</button>
+                <button type="button" id="btnOffer{{item.id}}" onclick="sendOffer({{item.id}})">Отправить</button>
             </div>            
             {{ else }}
-            {{ if group.contract_23 }} Контракт заключен {{ else }} Контракт не заключен {{ endif }}
+            {{ if item.contract_state }} Контракт заключен {{ else }} Контракт не заключен {{ endif }}
             <div class="input-group">
-                <p>{{ if group.contract_23 }} Расторгнуть контракт? {{ else }} Попытаться заключить контракт? {{ endif }}</p>
+                <p>{{ if item.contract_state }} Расторгнуть контракт? {{ else }} Попытаться заключить контракт? {{ endif }}</p>
                 <label>
-                    <input type="radio" name="change_contract_23" value="1" onchange="sendField(this)"> Да
+                    <input type="radio" name="{{ item.contract }}" value="1" onchange="sendField(this)"> Да
                 </label>
                 <label>
-                    <input type="radio" name="change_contract_23" value="0" onchange="sendField(this)" checked> Нет
+                    <input type="radio" name="{{ item.contract }}" value="0" onchange="sendField(this)" checked> Нет
                 </label>
 
             </div>     
             {{ endif }}
         {{ endif }}
     </div>
-    <div class="block">
-        Продавец B<br>
-        {{ if player.is_buyer }}            
-            <span>Ваше предложение <span id="current_offer2"></span></span></br>
-            <div class="input-group">
-                <input id="my_offer2" type="number" placeholder="Цена">
-                <button type="button" id="btnOffer2" onclick="sendOffer(2)">Отправить</button>
-            </div>
-        {{ else }}
-            {{ if player.id_in_group == 2 }}
-            <span>Ваше предложение <span id="current_offer2"></span></span></br>
-            <div class="input-group">
-                <input id="my_offer2" type="number" placeholder="Цена" class="price-input">
-                <input id="my_offer_vol" type="number" placeholder="Объем" class="price-input">
-                <button type="button" id="btnOffer2" onclick="sendOffer(2)">Отправить</button>
-            </div>   
-            {{ else }}
-            {{ if group.contract_13 }} Контракт заключен {{ else }} Контракт не заключен {{ endif }}
-            <div class="input-group">
-                <!-- <label>
-                    <input name="change_contract_13" onchange="sendField(this)" type="checkbox" />
-                    {{ if group.contract_13 }} Расторгнуть контракт {{ else }} Попытаться заключить контракт {{ endif }}
-                </label> -->
-                <p>{{ if group.contract_13 }} Расторгнуть контракт? {{ else }} Попытаться заключить контракт? {{ endif }}</p>
-                <label>
-                    <input type="radio" name="change_contract_13" value="1" onchange="sendField(this)"> Да
-                </label>
-                <label>
-                    <input type="radio" name="change_contract_13" value="0" onchange="sendField(this)" checked> Нет
-                </label>
+{{ endfor }}    
 
-            </div>                       
-            {{ endif }}
-        {{ endif }}
-    </div>
-    <div class="block">
-        Продавец C<br>
-
-        {{ if player.is_buyer }}            
-            <span>Ваше предложение <span id="current_offer3"></span></span></br>
-            <div class="input-group">
-                <input id="my_offer3" type="number" placeholder="Цена">
-                <button type="button" id="btnOffer3" onclick="sendOffer(3)">Отправить</button>
-            </div>
-        {{ else }}
-            {{ if player.id_in_group == 3 }}
-            <span>Ваше предложение <span id="current_offer3"></span></span></br>
-            <div class="input-group">
-                <input id="my_offer3" type="number" placeholder="Цена" class="price-input">
-                <input id="my_offer_vol" type="number" placeholder="Объем" class="price-input">
-                <button type="button" id="btnOffer3" onclick="sendOffer(3)">Отправить</button>
-            </div>            
-            {{ else }}
-            {{ if group.contract_12 }} Контракт заключен {{ else }} Контракт не заключен {{ endif }}
-            <div class="input-group">
-                <p>{{ if group.contract_12 }} Расторгнуть контракт? {{ else }} Попытаться заключить контракт? {{ endif }}</p>
-                <label>
-                    <input type="radio" name="change_contract_12" value="1" onchange="sendField(this)"> Да
-                </label>
-                <label>
-                    <input type="radio" name="change_contract_12" value="0" onchange="sendField(this)" checked> Нет
-                </label>
-                
-            </div>                       
-            {{ endif }}
-        {{ endif }}        
-    </div>
 </div>
 
 <script>
