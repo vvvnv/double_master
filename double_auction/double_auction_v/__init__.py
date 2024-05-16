@@ -10,13 +10,12 @@ class C(BaseConstants):
     PLAYERS_PER_GROUP = None
     NUM_ROUNDS = 2
     SELLER_NUM = 3  # Количество продавцов
-    ITEMS_PER_SELLER = 3  # Количество товара для продажи
-    ITEMS_PER_BUYER = 3  # Количесвто товаров для покупки
-    TIME_FOR_PERIOD = 60
-    TIME_FOR_PERIOD1 = 60
+    ITEMS_PER_SELLER = 18  # Количество товара для продажи
+    ITEMS_PER_BUYER = 7  # Количество товаров для покупки
+    TIME_FOR_PERIOD = 60 * 1.5
+    TIME_FOR_PERIOD1 = 60 * 2.5
     MAX_VAL = 200
     FINE_CHOISE = [0, 5, 10]
-    # extra_coef = 10
     COMPANY_NAMES = ['A', 'B', 'C']
     PROFIT_PER_CONTRACT = 2
 

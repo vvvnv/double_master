@@ -10,13 +10,13 @@ class C(BaseConstants):
     PLAYERS_PER_GROUP = None
     NUM_ROUNDS = 3
     SELLER_NUM = 3  # Количество продавцов
-    ITEMS_PER_SELLER = 3  # Количество товара для продажи
-    ITEMS_PER_BUYER = 3  # Количесвто товаров для покупки
-    TIME_FOR_PERIOD = 60 * 0.2
-    TIME_FOR_PERIOD1 = 60 * 0.2
+    ITEMS_PER_SELLER = 18  # Количество товара для продажи
+    ITEMS_PER_BUYER = 7  # Количество товаров для покупки
+    TIME_FOR_PERIOD = 60 * 1.5
+    TIME_FOR_PERIOD1 = 60 * 1.5
     MAX_VAL = 200
     FINE_CHOISE = [0, 5, 10]
-    # extra_coef = 10
+    FINE_CHOISE3 = [12, 5, 10]
     COMPANY_NAMES = ['A', 'B', 'C']
     PROFIT_PER_CONTRACT = 2
 
@@ -53,10 +53,10 @@ class Subsession(BaseSubsession):
 
 
 def creating_session(subsession: Subsession):
-    subsession.PRODUCTION_COSTS_MIN = 10
-    subsession.PRODUCTION_COSTS_MAX = 80
-    subsession.VALUATION_MIN = 50
-    subsession.VALUATION_MAX = 110
+    subsession.PRODUCTION_COSTS_MIN = 25
+    subsession.PRODUCTION_COSTS_MAX = 35
+    subsession.VALUATION_MIN = 20
+    subsession.VALUATION_MAX = 60
     subsession.num_sellers = C.SELLER_NUM
 
     for g in subsession.get_groups():
@@ -126,7 +126,7 @@ class Player(BasePlayer):
 
 
 def init_group(group: Group, keep_info_from_last=True):
-    if keep_info_from_last and (group.round_number > 1):
+    if keep_info_from_last and (group.round_number == 2):
         # копируем соглашения из прошлого раунда
         prev_group = group.in_round(group.round_number - 1)
         group.contract_12 = prev_group.contract_12
@@ -176,7 +176,10 @@ def init_player(player: Player):
         if player.id_in_group == 3 and group.bad_3:
             player.is_bad = True
 
-    player.extra_charge_for_bad = random.choice(C.FINE_CHOISE)  # cu
+    if group.round_number == 3:
+        player.extra_charge_for_bad = random.choice(C.FINE_CHOISE3)  # cu
+    else:
+        player.extra_charge_for_bad = random.choice(C.FINE_CHOISE)
 
     sorted_list = sorted(random_list, reverse=player.is_buyer)
     player.num_items_left = len(sorted_list)
@@ -532,7 +535,7 @@ class ResultsWaitPage(WaitPage):
 
 
 class Results(Page):
-    timeout_seconds = 20
+    timeout_seconds = 10
 
 
 class TotalResultWaitPage(WaitPage):
@@ -560,4 +563,4 @@ class TotalResult(Page):
         return player.round_number == C.NUM_ROUNDS
 
 
-page_sequence = [Introduction, WaitToStart, Trading, ResultsWaitPage, Results, TotalResultWaitPage, TotalResult]
+page_sequence = [Introduction, WaitToStart, Trading, ResultsWaitPage, Results]
