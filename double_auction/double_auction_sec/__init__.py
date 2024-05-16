@@ -12,8 +12,8 @@ class C(BaseConstants):
     SELLER_NUM = 3  # Количество продавцов
     ITEMS_PER_SELLER = 3  # Количество товара для продажи
     ITEMS_PER_BUYER = 3  # Количесвто товаров для покупки
-    TIME_FOR_PERIOD = 60 * 0.1
-    TIME_FOR_PERIOD1 = 60 * 0.1
+    TIME_FOR_PERIOD = 60 * 0.2
+    TIME_FOR_PERIOD1 = 60 * 0.2
     MAX_VAL = 200
     FINE_CHOISE = [0, 5, 10]
     # extra_coef = 10
@@ -51,7 +51,6 @@ class Subsession(BaseSubsession):
 
 
 def creating_session(subsession: Subsession):
-    subsession.group_randomly()
     subsession.PRODUCTION_COSTS_MIN = 10
     subsession.PRODUCTION_COSTS_MAX = 80
     subsession.VALUATION_MIN = 50
@@ -167,14 +166,13 @@ def init_player(player: Player):
         random_list = [random.randint(subsession.PRODUCTION_COSTS_MIN, subsession.PRODUCTION_COSTS_MAX) for _ in
                        range(C.ITEMS_PER_SELLER)]
         player.current_offer1 = C.MAX_VAL
+        player.is_bad = False
         if player.id_in_group == 1 and group.bad_1:
             player.is_bad = True
-        elif player.id_in_group == 2 and group.bad_2:
+        if player.id_in_group == 2 and group.bad_2:
             player.is_bad = True
-        elif player.id_in_group == 3 and group.bad_3:
+        if player.id_in_group == 3 and group.bad_3:
             player.is_bad = True
-        else:
-            player.is_bad = False
 
     player.extra_charge_for_bad = random.choice(C.FINE_CHOISE)  # cu
 
@@ -201,35 +199,40 @@ def calc_profit_group(group: Group):
         if cur_state:
             if num_change > 0:
                 cur_state = False
-                if sellers[c[1][0]] != def_bad - 1:
-                    if sellers[c[1][0]] == 0:
+                print(group.bad_1, group.bad_2, group.bad_3)
+                if sellers[c[1][0]].id_in_group != def_bad - 1:
+                    if sellers[c[1][0]].id_in_group == 0:
                         group.bad_1 = False
-                    elif sellers[c[1][0]] == 1:
+                    if sellers[c[1][0]].id_in_group == 1:
                         group.bad_2 = False
-                    elif sellers[c[1][0]] == 2:
+                    if sellers[c[1][0]].id_in_group == 2:
                         group.bad_3 = False
-                elif sellers[c[1][1]] != def_bad - 1:
-                    if sellers[c[1][1]] == 0:
+                print(group.bad_1, group.bad_2, group.bad_3)
+                if sellers[c[1][1]].id_in_group != def_bad - 1:
+                    if sellers[c[1][1]].id_in_group == 0:
                         group.bad_1 = False
-                    elif sellers[c[1][1]] == 1:
+                    if sellers[c[1][1]].id_in_group == 1:
                         group.bad_2 = False
-                    elif sellers[c[1][1]] == 2:
+                    if sellers[c[1][1]].id_in_group == 2:
                         group.bad_3 = False
+                print(group.bad_1, group.bad_2, group.bad_3)
         else:
+            print(group.bad_1, group.bad_2, group.bad_3)
             if num_change == 2:
                 cur_state = True
                 if sellers[c[1][0]] == 0:
                     group.bad_1 = True
-                elif sellers[c[1][0]] == 1:
+                if sellers[c[1][0]] == 1:
                     group.bad_2 = True
-                elif sellers[c[1][0]] == 2:
+                if sellers[c[1][0]] == 2:
                     group.bad_3 = True
-                elif sellers[c[1][1]] == 0:
+                if sellers[c[1][1]] == 0:
                     group.bad_1 = True
-                elif sellers[c[1][1]] == 1:
+                if sellers[c[1][1]] == 1:
                     group.bad_2 = True
-                elif sellers[c[1][1]] == 2:
+                if sellers[c[1][1]] == 2:
                     group.bad_3 = True
+            print(group.bad_1, group.bad_2, group.bad_3)
         setattr(group, c[0], cur_state)
 
         if cur_state:

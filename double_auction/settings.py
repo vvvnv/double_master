@@ -5,7 +5,7 @@ SESSION_CONFIGS = [
     dict(
         name='guess_two_thirds',
         display_name="Auction Game",
-        app_sequence=['survey_short','double_auction_sec'],
+        app_sequence=['survey_short','double_auction_v'],
         num_demo_participants=4,
     ),
     # dict(

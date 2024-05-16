@@ -12,8 +12,8 @@ class C(BaseConstants):
     SELLER_NUM = 3  # Количество продавцов
     ITEMS_PER_SELLER = 3  # Количество товара для продажи
     ITEMS_PER_BUYER = 3  # Количесвто товаров для покупки
-    TIME_FOR_PERIOD = 60 * 0.5
-    TIME_FOR_PERIOD1 = 60 * 0.5
+    TIME_FOR_PERIOD = 60
+    TIME_FOR_PERIOD1 = 60
     MAX_VAL = 200
     FINE_CHOISE = [0, 5, 10]
     # extra_coef = 10
@@ -475,4 +475,4 @@ class TotalResult(Page):
         return player.round_number == C.NUM_ROUNDS
 
 
-page_sequence = [Introduction, WaitToStart, Trading, ResultsWaitPage, Results, TotalResultWaitPage, TotalResult]
+page_sequence = [Introduction, WaitToStart, Trading, ResultsWaitPage, Results, TotalResultWaitPage]
