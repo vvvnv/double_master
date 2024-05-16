@@ -8,7 +8,7 @@ doc = "Double auction market"
 class C(BaseConstants):
     NAME_IN_URL = 'double_auction_v'
     PLAYERS_PER_GROUP = None
-    NUM_ROUNDS = 2
+    NUM_ROUNDS = 3
     SELLER_NUM = 3  # Количество продавцов
     ITEMS_PER_SELLER = 3  # Количество товара для продажи
     ITEMS_PER_BUYER = 3  # Количесвто товаров для покупки
@@ -29,6 +29,7 @@ def get_company_name(company_id):
 
 
 def get_bad_name(bad_1, bad_2, bad_3):
+    print(bad_1, bad_2, bad_3)
     res = []
     if bad_1:
         res.append(1)
@@ -39,6 +40,7 @@ def get_bad_name(bad_1, bad_2, bad_3):
     names = []
     for i in res:
         names.append(C.COMPANY_NAMES[i - 1])
+    print(names)
     return ",".join(names)
 
 
@@ -123,7 +125,7 @@ class Player(BasePlayer):
                                              initial=False)  # изменить соглашение с продавцом с максимальным id
 
 
-def init_group(group: Group, keep_info_from_last=False):
+def init_group(group: Group, keep_info_from_last=True):
     if keep_info_from_last and (group.round_number > 1):
         # копируем соглашения из прошлого раунда
         prev_group = group.in_round(group.round_number - 1)
@@ -192,6 +194,7 @@ def calc_profit_group(group: Group):
     players = group.get_players()
     sellers = players[:group.subsession.num_sellers]
     def_bad = group.def_bad_company_num
+    print(f"def_bad {def_bad}")
     contracts = [['contract_12', (0, 1)], ['contract_13', (0, 2)], ['contract_23', (1, 2)]]
     for c in contracts:
         cur_state = getattr(group, c[0])
@@ -199,40 +202,42 @@ def calc_profit_group(group: Group):
         if cur_state:
             if num_change > 0:
                 cur_state = False
-                print(group.bad_1, group.bad_2, group.bad_3)
-                if sellers[c[1][0]].id_in_group != def_bad - 1:
-                    if sellers[c[1][0]].id_in_group == 0:
-                        group.bad_1 = False
-                    if sellers[c[1][0]].id_in_group == 1:
-                        group.bad_2 = False
-                    if sellers[c[1][0]].id_in_group == 2:
-                        group.bad_3 = False
-                print(group.bad_1, group.bad_2, group.bad_3)
-                if sellers[c[1][1]].id_in_group != def_bad - 1:
-                    if sellers[c[1][1]].id_in_group == 0:
-                        group.bad_1 = False
-                    if sellers[c[1][1]].id_in_group == 1:
-                        group.bad_2 = False
-                    if sellers[c[1][1]].id_in_group == 2:
-                        group.bad_3 = False
-                print(group.bad_1, group.bad_2, group.bad_3)
+                for i in range(0, 2):
+                    if sellers[c[1][i]].id_in_group != def_bad:
+                        if sellers[c[1][i]].id_in_group == 1:
+                            group.bad_1 = False
+                        if sellers[c[1][i]].id_in_group == 2:
+                            group.bad_2 = False
+                        if sellers[c[1][i]].id_in_group == 3:
+                            group.bad_3 = False
+            else:
+                for i in range(0, 2):
+                    if sellers[c[1][i]].id_in_group == 1:
+                        group.bad_1 = True
+                    if sellers[c[1][i]].id_in_group == 2:
+                        group.bad_2 = True
+                    if sellers[c[1][i]].id_in_group == 3:
+                        group.bad_3 = True
+
         else:
-            print(group.bad_1, group.bad_2, group.bad_3)
             if num_change == 2:
                 cur_state = True
-                if sellers[c[1][0]] == 0:
-                    group.bad_1 = True
-                if sellers[c[1][0]] == 1:
-                    group.bad_2 = True
-                if sellers[c[1][0]] == 2:
-                    group.bad_3 = True
-                if sellers[c[1][1]] == 0:
-                    group.bad_1 = True
-                if sellers[c[1][1]] == 1:
-                    group.bad_2 = True
-                if sellers[c[1][1]] == 2:
-                    group.bad_3 = True
-            print(group.bad_1, group.bad_2, group.bad_3)
+                for i in range(0, 2):
+                    if sellers[c[1][i]].id_in_group == 1:
+                        group.bad_1 = True
+                    if sellers[c[1][i]].id_in_group == 2:
+                        group.bad_2 = True
+                    if sellers[c[1][i]].id_in_group == 3:
+                        group.bad_3 = True
+            else:
+                for i in range(0, 2):
+                    if sellers[c[1][i]].id_in_group != def_bad:
+                        if sellers[c[1][i]].id_in_group == 1:
+                            group.bad_1 = False
+                        if sellers[c[1][i]].id_in_group == 2:
+                            group.bad_2 = False
+                        if sellers[c[1][i]].id_in_group == 3:
+                            group.bad_3 = False
         setattr(group, c[0], cur_state)
 
         if cur_state:
