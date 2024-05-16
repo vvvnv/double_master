@@ -402,6 +402,24 @@ class WaitToStart(WaitPage):
         group.start_timestamp = int(time.time())
 
 
+def get_contracts(player_num):
+    if player_num == 1:
+        return ['', 'change_contract_12', 'change_contract_13']
+    if player_num == 2:
+        return ['change_contract_12', '', 'change_contract_23']
+    if player_num == 3:
+        return ['change_contract_13', 'change_contract_23', '']
+    return ['','','']
+
+def get_contract_state(group, player_num):
+    if player_num == 1:
+        return ['', group.contract_12, group.contract_13]
+    if player_num == 2:
+        return [group.contract_12, '', group.contract_23]
+    if player_num == 3:
+        return [group.contract_13, group.contract_23, '']
+    return ['','','']
+
 class Trading(Page):
     form_model = 'player'
 
@@ -410,9 +428,7 @@ class Trading(Page):
         if player.is_buyer:
             return []
         else:
-            return {1: ['change_contract_13', 'change_contract_12'],
-                    2: ['change_contract_12', 'change_contract_23'],
-                    3: ['change_contract_13', 'change_contract_23']}[player.id_in_group]
+            return [a for a in get_contracts(player.id_in_group) if a != '']
 
     live_method = live_method
 
@@ -422,9 +438,17 @@ class Trading(Page):
 
     @staticmethod
     def vars_for_template(player):
+        contracts = get_contracts(player.id_in_group)
+        contracts_state = get_contract_state(player.group, player.id_in_group)
         return {'name': (get_company_name(player.id_in_group) if not player.is_buyer else ''),
-                'player_msg': 'плохая компания: ' + get_company_name(player.group.bad_company_num),
-                'item_vals': {(i + 1): itm.item_value for i, itm in enumerate(ItemsValues.filter(trader=player))}}
+                'player_msg': 'плохая компания: ' + get_bad_name(player.group),
+                'item_vals': {(i + 1): itm.item_value for i, itm in enumerate(ItemsValues.filter(trader=player))},
+                'companies': [{'id':i+1,
+                                'name':get_company_name(i+1),
+                                'contract': contracts[i],
+                                'contract_state':contracts_state[i]
+                            } for i in range(player.subsession.num_sellers)]
+                }
 
     @staticmethod
     def get_timeout_seconds(player: Player):
@@ -435,7 +459,6 @@ class Trading(Page):
             return (group.start_timestamp + C.TIME_FOR_PERIOD1) - time.time()
         else:
             return (group.start_timestamp + C.TIME_FOR_PERIOD) - time.time()
-
 
 class ResultsWaitPage(WaitPage):
     @staticmethod
